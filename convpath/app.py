@@ -1,10 +1,15 @@
 import tiktoken
+import numpy as np
 from openai import OpenAI
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics.pairwise import cosine_similarity
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from rich.progress import track
 from .color_logger import get_logger
 from .settings import Settings
+from .utils import flatten, deflatten
 from .package_types import Conversation, LLMMessage, Round, Embedding
 from .constants import USER, ASSISTANT
 
@@ -39,14 +44,28 @@ class App:
         self.conversations = self._prepare_conversations(conversations, titles)
 
     def _prepare_conversations(self, conversations: list[list[dict[str, Any]]], titles: list[str] = []) -> list[Conversation]:
-        self.logger.info('Preparing conversations...', color='green')
         if not titles:
             titles = [''] * len(conversations)
+        elif len(titles) != len(conversations):
+            raise ValueError('The number of titles must match the number of conversations.')
+        elif len(titles) != len(set(titles)):
+            raise ValueError('Titles must be unique.')
+        
+        self.logger.info('Preparing conversations...', color='green')
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(self._load_single_conversation, c, t) for c, t in zip(conversations, titles)]
             loaded = [c for f in track(futures, description="├ Loading conversations") if (c := f.result())]
         self.logger.info(f'├ Loaded {len(loaded)}/{len(conversations)} conversations.')
+        
         loaded = self._create_embeddings(loaded)
+
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self._compute_single_conversation_similarities, c) for c in loaded]
+            loaded = [f.result() for f in track(futures, description="├ Computing similarities")]
+
+        self.logger.info('├ Fitting T-SNE...')
+        self._create_tsne_embeddings(loaded)
+
         self.logger.info('Done.', color='green')
         return loaded
 
@@ -109,3 +128,23 @@ class App:
             return None
         return Round(user_message=user_message, assistant_message=assistant_message)
     
+    def _compute_single_conversation_similarities(self, conversation: Conversation) -> Conversation:
+        embeddings = [np.array([r.embedding]) for r in conversation.rounds]
+        similarities: list[float] = [cosine_similarity(embeddings[i], embeddings[i+1])[0][0] for i in range(len(embeddings) - 1)]
+        conversation.similarities = similarities
+        conversation.min_similarity = min(similarities)
+        conversation.max_similarity = max(similarities)
+        conversation.avg_similarity = sum(similarities) / len(similarities)
+        conversation.first_last_similarity_difference = similarities[0] - similarities[-1]
+        return conversation
+
+    def _create_tsne_embeddings(self, conversations: list[Conversation]) -> list[Conversation]:
+        embeddings: list[list[Embedding]] = [[r.embedding for r in c.rounds] for c in conversations]
+        array = np.array(flatten(embeddings))
+        scaled_array = StandardScaler().fit_transform(array)
+        tsne_embeddings: list[Embedding] = TSNE(n_components=2).fit_transform(scaled_array).tolist()
+        deflatten_tsne_embeddings = deflatten(tsne_embeddings, embeddings)
+        for i in range(len(conversations)):
+            for j in range(len(conversations[i].rounds)):
+                conversations[i].rounds[j].tsne_embedding = deflatten_tsne_embeddings[i][j]
+        return conversations

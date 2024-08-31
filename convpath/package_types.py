@@ -36,11 +36,13 @@ class LLMMessage(BaseModel):
 
 
 class Round:
+    embedding: Embedding
+    tsne_embedding: Embedding
+
     def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage) -> None:
-        self.embedding: Embedding = []
         self.user_message = user_message
         self.assistant_message = assistant_message
-        self.id = self._create_id()
+        self.id = self._create_id()        
     
     def _create_id(self) -> int:
         return hash(self.as_text())
@@ -50,6 +52,12 @@ class Round:
 
 
 class Conversation:
+    similarities: list[float]
+    min_similarity: float
+    max_similarity: float
+    avg_similarity: float
+    first_last_similarity_difference: float
+
     def __init__(self, rounds: list[Round], title: str) -> None:
         self.title = title
         self.rounds = rounds
