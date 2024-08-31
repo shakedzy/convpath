@@ -1,0 +1,55 @@
+from pydantic import BaseModel, field_validator, ValidationError
+from typing import Literal
+from .constants import USER, ASSISTANT
+
+
+Color = Literal[
+    "red",
+    "green",
+    "yellow",
+    "blue",
+    "magenta",
+    "cyan"
+]
+
+
+Embedding = list[float]
+
+
+class LLMMessage(BaseModel):
+    role: str
+    content: str
+
+    @field_validator("content", mode='before')
+    def validate_content(cls, v):
+        if not isinstance(v, str) or len(v.strip()) == 0:
+            raise ValidationError('Content must be a non-empty string.')
+        else:
+            return v.strip()
+        
+    @field_validator("role", mode="before")
+    def validate_role(cls, v):
+        if not isinstance(v, str) or len(v.strip()) == 0:
+            raise ValidationError('Role must be a non-empty string.')
+        else:
+            return v.strip().upper()
+
+
+class Round:
+    def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage) -> None:
+        self.embedding: Embedding = []
+        self.user_message = user_message
+        self.assistant_message = assistant_message
+        self.id = self._create_id()
+    
+    def _create_id(self) -> int:
+        return hash(self.as_text())
+
+    def as_text(self) -> str:
+        return f'{USER}: {self.user_message.content} {ASSISTANT}: {self.assistant_message.content}'
+
+
+class Conversation:
+    def __init__(self, rounds: list[Round], title: str) -> None:
+        self.title = title
+        self.rounds = rounds
