@@ -41,7 +41,6 @@ class AppUI:
         figure.add_hline(y=min(avg + (2*std), 1), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)   # type: ignore
         figure.add_hline(y=avg - (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)           # type: ignore
         
-        figure.update_traces(ids=[c.title for c in self.conversations], hovertemplate='%{id}', row=row, col=col)
         return figure
     
     def _plot_error_bars(self, figure: go.Figure, row: int, col: int) -> go.Figure:
@@ -93,7 +92,6 @@ class AppUI:
             marker_color=points_color,
         )
         figure.add_trace(points_plot, row=row, col=col)
-        figure.update_traces(ids=[c.title for c in self.conversations], hovertemplate='%{id}', row=row, col=col)
 
         avg_green_error = sum(green_error_bars) / len(green_error_bars)
         avg_red_error = sum(red_error_bars) / len(red_error_bars)
@@ -136,7 +134,6 @@ class AppUI:
         if avg - (2*std) >= 0:
             figure.add_hline(y=avg - (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)   # type: ignore
         
-        figure.update_traces(ids=[c.title for c in self.conversations], hovertemplate='%{id}', row=row, col=col)
         return figure
 
 
@@ -166,20 +163,16 @@ class AppUI:
         figure = self._plot_error_bars(figure, 2, 1)
         figure = self._plot_first_last_similarities(figure, 3, 1)
 
-        figure.update_layout(showlegend=False)
+        figure.update_layout(showlegend=False, margin=dict(l=20, r=20, t=40, b=20), plot_bgcolor='#fbfbfb')
+        figure.update_traces(ids=[c.title for c in self.conversations], hovertemplate='%{id}<extra></extra>')
         figure.update_xaxes(visible=False)
 
         dash_app.layout = [
-            html.Div(className="card", children=[
-                html.H2("Conversations Path Analysis", style={'margin-bottom': '15px'})
+            html.Div(className="card", style={'text-align': 'center'}, children=[
+                html.Img(src=dash_app.get_asset_url('logo.png'), style={'max-height': '100px'})
             ]),
             html.Div(className="graph-container",
-                     children=[dcc.Graph(figure=figure, style={'height': '80vh', 'padding': '5px'}),]),
-            html.Div(className="card", children=[
-                html.Div(className="footer", children=[
-                    "ConvPath"
-                ])
-            ])
+                     children=[dcc.Graph(figure=figure, style={'height': '70vh'}),]),
         ]
         host_: str = host or self.settings.host
         port_: int = port or self.settings.port

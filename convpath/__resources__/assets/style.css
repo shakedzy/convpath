@@ -3,8 +3,8 @@
 /* General Styles */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #e3f2fd; /* Light Blue Background */
-    color: #37474f; /* Dark Gray Text */
+    background-color: #f5f0e6; /* Very light leather background */
+    color: #5a4a3b; /* Soft brown text */
     margin: 0;
     padding: 0;
 }
@@ -18,7 +18,7 @@ body {
 
 /* Navbar Styles */
 .navbar {
-    background-color: #ffffff;
+    background-color: #f0e4d4; /* Light beige */
     padding: 15px 20px;
     display: flex;
     align-items: center;
@@ -30,7 +30,7 @@ body {
 }
 
 .navbar a {
-    color: #1976d2; /* Primary Blue */
+    color: #8b6f4e; /* Darker leather brown */
     text-decoration: none;
     font-weight: 500;
     margin-right: 20px;
@@ -38,13 +38,13 @@ body {
 }
 
 .navbar a:hover {
-    color: #1565c0; /* Darker Blue */
+    color: #6d523a; /* Darker hover state */
 }
 
 /* Button Styles */
 .btn {
-    background-color: #1976d2; /* Primary Blue */
-    color: white;
+    background-color: #d9c4a1; /* Light tan */
+    color: #5a4a3b; /* Soft brown text */
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
@@ -58,17 +58,18 @@ body {
 }
 
 .btn:hover {
-    background-color: #1565c0; /* Darker Blue */
+    background-color: #b8a079; /* Darker tan */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Card Styles */
 .card {
-    background-color: #ffffff;
+    background-color: #ffffff; /* White for contrast */
+    width: 90%; /* Set width to 90% */
+    margin: 20px auto; /* Center the card horizontally and add vertical spacing */
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    margin-bottom: 20px;
     transition: box-shadow 0.3s ease;
 }
 
@@ -78,11 +79,12 @@ body {
 
 /* Graph Container Styles */
 .graph-container {
-    background-color: #ffffff;
+    background-color: #f0e4d4; /* Light beige for the graph background */
+    width: 90%; /* Set width to 90% */
+    margin: 20px auto; /* Center the graph container */
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    margin-top: 20px;
 }
 
 /* Input and Select Styles */
@@ -91,24 +93,24 @@ input[type="text"], input[type="number"], select {
     padding: 12px;
     margin: 10px 0;
     border-radius: 8px;
-    border: 1px solid #b0bec5; /* Light Gray Border */
+    border: 1px solid #c2b09d; /* Light brown border */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 input[type="text"]:focus, input[type="number"]:focus, select:focus {
-    border-color: #1976d2; /* Primary Blue */
+    border-color: #8b6f4e; /* Darker leather brown */
     outline: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Footer Styles */
 .footer {
-    background-color: #ffffff;
+    background-color: #f0e4d4; /* Light beige */
     padding: 20px;
     border-top: 1px solid #e0e0e0;
     text-align: center;
-    color: #777;
+    color: #5a4a3b; /* Soft brown */
     font-size: 14px;
     position: sticky;
     bottom: 0;
