@@ -1,12 +1,12 @@
 import pkg_resources
 from typing import TypeVar, Any
-from . import __package_name__
+from .constants import __package_name__
 
 
 T = TypeVar('T')
 
 def path_to_resource(filename: str) -> str:
-    return pkg_resources.resource_filename(__package_name__, f'resources/{filename}')
+    return pkg_resources.resource_filename(__package_name__, f'__resources__/{filename}')
 
 
 def flatten(lst: list[list[T]]) -> list[T]:

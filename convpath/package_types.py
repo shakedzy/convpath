@@ -38,6 +38,7 @@ class LLMMessage(BaseModel):
 class Round:
     embedding: Embedding
     tsne_embedding: Embedding
+    trimmed: bool = False
 
     def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage) -> None:
         self.user_message = user_message
