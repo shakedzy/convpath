@@ -141,7 +141,7 @@ class DataLoader:
         conversation.min_similarity = min(similarities)
         conversation.max_similarity = max(similarities)
         conversation.avg_similarity = sum(similarities) / len(similarities)
-        conversation.first_last_similarity_difference = similarities[0] - similarities[-1]
+        conversation.first_last_similarity_difference = cosine_similarity(embeddings[0], embeddings[-1])[0][0]
         return conversation
 
     def _create_tsne_embeddings(self, conversations: list[Conversation]) -> list[Conversation]:

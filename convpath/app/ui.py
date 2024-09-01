@@ -36,10 +36,14 @@ class AppUI:
         figure.add_hline(y=avg, line_color=color, opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)                                      # type: ignore
 
         std = np.std([c.avg_similarity for c in self.conversations])
-        figure.add_hline(y=min(avg + std, 1), line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)      # type: ignore
-        figure.add_hline(y=avg - std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)              # type: ignore
-        figure.add_hline(y=min(avg + (2*std), 1), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)   # type: ignore
-        figure.add_hline(y=avg - (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)           # type: ignore
+        if avg + std <= 1:
+            figure.add_hline(y=avg + std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)          # type: ignore
+        if avg - std >= 0:
+            figure.add_hline(y=avg - std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)          # type: ignore
+        if avg + (2*std) <= 1:
+            figure.add_hline(y=avg + (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)       # type: ignore
+        if avg - (2*std) >= 0:
+            figure.add_hline(y=avg - (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)       # type: ignore
         
         return figure
     
@@ -124,13 +128,14 @@ class AppUI:
 
         avg = sum(abs_first_last) / len(self.conversations)
         figure.add_hline(y=avg, line_color=color, opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)                                  # type: ignore
-        figure.add_hline(y=0, line_color='black', opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)                                  # type: ignore
 
         std = np.std(abs_first_last)
-        figure.add_hline(y=avg + std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)          # type: ignore
+        if avg + std <= 1:
+            figure.add_hline(y=avg + std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)      # type: ignore
         if avg - std >= 0:
             figure.add_hline(y=avg - std, line_color=color, line_dash="dash", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)      # type: ignore
-        figure.add_hline(y=avg + (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)       # type: ignore
+        if avg + (2*std) <= 1:
+            figure.add_hline(y=avg + (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)   # type: ignore
         if avg - (2*std) >= 0:
             figure.add_hline(y=avg - (2*std), line_color=color, line_dash="dot", opacity=self.OPACITY, line_width=self.LINE_WIDTH, row=row, col=col)   # type: ignore
         
