@@ -41,18 +41,40 @@ body {
     color: #6d523a; /* Darker hover state */
 }
 
+.container {
+    width: 90%; /* Set width to 90% */
+    margin: 20px auto; /* Center the card horizontally and add vertical spacing */
+}
+
+/* Row Styles */
+.row {
+    display: flex; /* Use Flexbox to align items in a row */
+    align-items: stretch; /* Stretch items to fill available space */
+    margin-bottom: 20px; /* Space below the row */
+}
+
+/* Left Column Styles */
+/* .left-column {} */
+
+/* Right Column Styles */
+.right-column {
+    flex-grow: 1; /* Take remaining space */
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+}
+
 /* Button Styles */
 .btn {
     background-color: #d9c4a1; /* Light tan */
     color: #5a4a3b; /* Soft brown text */
-    padding: 12px 24px;
+    padding: 10px 20px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
     font-size: 16px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin: 10px 0;
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
@@ -65,8 +87,6 @@ body {
 /* Card Styles */
 .card {
     background-color: #ffffff; /* White for contrast */
-    width: 90%; /* Set width to 90% */
-    margin: 20px auto; /* Center the card horizontally and add vertical spacing */
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px;
@@ -80,7 +100,6 @@ body {
 /* Graph Container Styles */
 .graph-container {
     background-color: #f0e4d4; /* Light beige for the graph background */
-    width: 90%; /* Set width to 90% */
     margin: 20px auto; /* Center the graph container */
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
