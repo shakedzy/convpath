@@ -11,7 +11,7 @@ body {
 
 /* Container Styles */
 .container {
-    max-width: 1200px;
+    width: 90%; 
     margin: auto;
     padding: 20px;
 }
@@ -39,11 +39,6 @@ body {
 
 .navbar a:hover {
     color: #6d523a; /* Darker hover state */
-}
-
-.container {
-    width: 90%; /* Set width to 90% */
-    margin: 20px auto; /* Center the card horizontally and add vertical spacing */
 }
 
 /* Row Styles */
