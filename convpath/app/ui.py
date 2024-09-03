@@ -210,7 +210,7 @@ class AppUI:
         return figure
     
     def _plot_static_tsne(self, figure: go.Figure, row: int, col: int) -> go.Figure:
-        titles_and_tsne_embeddings = [(c.title, [r.tsne_embedding for r in c.rounds]) for c in self.conversations]
+        titles_and_tsne_embeddings = [(c.title, [r.tsne_embedding for r in c.steps]) for c in self.conversations]
 
         for title, conversation_embeddings in titles_and_tsne_embeddings:
             x = [e[0] for e in conversation_embeddings]
@@ -235,7 +235,7 @@ class AppUI:
         return figure
     
     def _update_tsne_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int) -> go.Figure: 
-        highlighted_embeddings = [[r.tsne_embedding for r in c.rounds] for c in self.conversations if c.title == highlighted_id][0]
+        highlighted_embeddings = [[r.tsne_embedding for r in c.steps] for c in self.conversations if c.title == highlighted_id][0]
         x = [e[0] for e in highlighted_embeddings]
         y = [e[1] for e in highlighted_embeddings]
         symbols = ["square"] + ["circle"]*len(highlighted_embeddings[1:-1]) + ["x"]

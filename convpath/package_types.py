@@ -35,7 +35,7 @@ class LLMMessage(BaseModel):
             return v.strip().upper()
 
 
-class Round:
+class Step:
     embedding: Embedding
     tsne_embedding: Embedding
     trimmed: bool = False
@@ -65,7 +65,8 @@ class Conversation:
     max_similarity: float
     avg_similarity: float
     first_last_similarity_difference: float
+    closest_conversations_titles_and_distances: list[tuple[str, float]]
 
-    def __init__(self, rounds: list[Round], title: str) -> None:
+    def __init__(self, steps: list[Step], title: str) -> None:
         self.title = title
-        self.rounds = rounds
+        self.steps = steps

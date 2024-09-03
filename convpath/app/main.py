@@ -8,7 +8,7 @@ class App:
     def __init__(self, 
                  *,
                  embedding_model: str,
-                 max_tokens: int = 8190,
+                 max_tokens: int | None = None,
                  base_url: str | None = None,
                  api_key: str | None = None):
         """
@@ -16,7 +16,10 @@ class App:
 
         Args:
             embedding_model (str): The name of the embedding model to use.
-            max_tokens (int): The maximum number of tokens accepted by the embedding model.
+            max_tokens (int | None): The maximum number of tokens accepted by the embedding model. This assists the loader in reducing calls to the embedding model by combining several 
+                            texts in a single call.
+                            If None, the loader will use pre-configured settings based on the model name. If it cannot find the model name in the pre-configured settings, 
+                            it will not stack texts t reduce calls to the model, but will call the model for each text individually.
             base_url (str | None): The base URL to use with OpenAI SDK. If None, OpenAI's default is used.
             api_key (str | None): The API key to use with OpenAI SDK. If None, OpenAI's default is used.
         """
