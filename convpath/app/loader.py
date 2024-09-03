@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
 from rich.progress import track
-from typing import Any
+from typing import Any, cast
 from ..color_logger import get_logger
 from ..settings import Settings
 from ..utils import flatten, deflatten
@@ -15,6 +15,8 @@ from ..constants import USER, ASSISTANT
 
 
 class DataLoader:
+    SINGLE = 'SINGLE'
+
     def __init__(self, 
                  *,
                  embedding_model: str,
@@ -37,16 +39,19 @@ class DataLoader:
         self.max_tokens = max_tokens
 
     def load_and_process_conversations(self, 
-                                       conversations: list[list[dict[str, Any]]], 
+                                       conversations: list[list[dict[str, Any] | str]], 
                                        titles: list[str] = []
                                        ) -> list[Conversation]:
         """
         Loads given conversations and preprocess them.
 
         Args:
-            conversations (list): A list of lists of dicts. Each dict is a message in the conversation with an LLM.
+            conversations (list): A list of lists of dicts or strings. 
+                            If dicts, each dict is a message in the conversation with an LLM.
                             The keys must be 'role' and 'content' and the values must be strings.
                             The 'role' key must be one of 'user' or 'assistant' (case-insensitive).
+                            If strings, each string is assumed to be a standalone message.
+                            Each conversations must be made either from dicts or strings, not a mix of both.
             titles (list):  An optional list of strings. Each string is the title for each conversation in conversations.
         """
         if not titles:
@@ -74,14 +79,19 @@ class DataLoader:
         self.logger.info('Done.', color='green')
         return loaded
 
-    def _load_single_conversation(self, conversation: list[dict[str, Any]], title: str | None) -> Conversation | None:
-        messages = [LLMMessage(**m) for m in conversation]
-        messages = [m for m in messages if m.role in [USER, ASSISTANT]]
-        if not (all(m.role == USER for m in messages[::2]) and \
-                all(m.role == ASSISTANT for m in messages[1::2])):
-            raise ValueError('Conversation must be alternating between `user` and `assistant`, (`user` goes first)')
-        rounds = [self._create_round_from_messages(user_message=messages[i], assistant_message=messages[i+1]) 
-                  for i in range(0, len(messages), 2)]
+    def _load_single_conversation(self, conversation: list[dict[str, Any] | str], title: str | None) -> Conversation | None:
+        if isinstance(conversation[0], str):
+            messages = [LLMMessage(role=self.SINGLE, content=m) for m in cast(list[str], conversation)]
+            rounds = [self._create_round_from_messages(user_message=m) for m in messages]
+        else:
+            messages = [LLMMessage(**m) for m in cast(list[dict[str, Any]], conversation)]
+            messages = [m for m in messages if m.role in [USER, ASSISTANT]]
+            if not (all(m.role == USER for m in messages[::2]) and \
+                    all(m.role == ASSISTANT for m in messages[1::2])):
+                raise ValueError('Conversation must be alternating between `user` and `assistant`, (`user` goes first)')
+            rounds = [self._create_round_from_messages(user_message=messages[i], assistant_message=messages[i+1]) 
+                    for i in range(0, len(messages), 2)]
+        
         rounds = [r for r in rounds if r]
         if len(rounds) < self.settings.min_rounds:
             return None
@@ -129,8 +139,9 @@ class DataLoader:
         self.logger.info(f'Embedded {total_tokens} tokens')
         return conversations
 
-    def _create_round_from_messages(self, user_message: LLMMessage, assistant_message: LLMMessage) -> Round | None:
-        if len(f'{user_message.content} {assistant_message.content}'.split(' ')) < self.settings.min_words_per_round:
+    def _create_round_from_messages(self, user_message: LLMMessage, assistant_message: LLMMessage | None = None) -> Round | None:
+        all_words = f'{user_message.content} {assistant_message.content}' if assistant_message else user_message.content
+        if len(all_words.split(' ')) < self.settings.min_words_per_round:
             return None
         return Round(user_message=user_message, assistant_message=assistant_message)
     

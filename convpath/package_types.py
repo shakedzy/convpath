@@ -40,16 +40,23 @@ class Round:
     tsne_embedding: Embedding
     trimmed: bool = False
 
-    def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage) -> None:
+    def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage | None = None) -> None:
         self.user_message = user_message
         self.assistant_message = assistant_message
         self.id = self._create_id()        
+
+    @property
+    def is_paired(self) -> bool:
+        return self.assistant_message is not None
     
     def _create_id(self) -> int:
         return hash(self.as_text())
 
     def as_text(self) -> str:
-        return f'{USER}: {self.user_message.content} {ASSISTANT}: {self.assistant_message.content}'
+        if self.assistant_message:
+            return f'{USER}: {self.user_message.content} {ASSISTANT}: {self.assistant_message.content}'
+        else:
+            return self.user_message.content
 
 
 class Conversation:
