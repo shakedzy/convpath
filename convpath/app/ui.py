@@ -357,9 +357,12 @@ class AppUI:
         """
         Launch the App server.
 
-        Args:
-            host: Hostname to listen on (default: "127.0.0.1").
-            port: Port to listen on (default: 8050)
+        Parameters
+        ----------
+            host : str | None 
+                Hostname to listen on (default: "127.0.0.1").
+            port : int | None 
+                Port to listen on (default: 8050)
         """
         dash_app = Dash(
             assets_folder=path_to_resource("assets/"),

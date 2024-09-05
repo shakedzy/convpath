@@ -8,12 +8,17 @@ def cosine_similarity(vector1: Embedding, vector2: Embedding) -> float:
     """
     Computes the cosine similarity between two vectors.
 
-    Args:
-        vector1 (Embedding): The first vector to compute the cosine similarity between.
-        vector2 (Embedding): The second vector to compute the cosine similarity between.
+    Parameters
+    ----------
+        vector1 : Embedding
+            The first vector to compute the cosine similarity between.
+        vector2 : Embedding
+            The second vector to compute the cosine similarity between.
 
-    Returns:
-        float: The cosine similarity between the two vectors.
+    Returns
+    -------
+        float
+            The cosine similarity between the two vectors.
     """
     return sk_cos_sim(np.array([vector1]), np.array([vector2]))[0][0]
 
@@ -22,12 +27,17 @@ def dynamic_time_warping_distance(path1: list[Embedding], path2: list[Embedding]
     """
     Computes the dynamic time warping distance between two paths.
 
-    Args:
-        path1 (list[Embedding]): The first path to compute the dynamic time warping distance between.
-        path2 (list[Embedding]): The second path to compute the dynamic time warping distance between.
+    Parameters
+    ----------
+        path1 : list[Embedding]
+            The first path to compute the dynamic time warping distance between.
+        path2 : list[Embedding]
+            The second path to compute the dynamic time warping distance between.
 
-    Returns:
-        float: The dynamic time warping distance between the two paths.
+    Returns
+    -------
+        float
+            The dynamic time warping distance between the two paths.
     """
     n, m = len(path1), len(path2)
     cost_matrix = cdist(path1, path2)
