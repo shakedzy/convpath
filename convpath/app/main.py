@@ -76,7 +76,7 @@ class App:
         """
         self.loader.save(self.conversations, filename)
 
-    def load_prepared(self, filename: str) -> list[Conversation]:
+    def load_prepared(self, filename: str) -> None:
         """
         Loads preprocessed conversations from a file.
 
@@ -84,10 +84,5 @@ class App:
         ----------
             filename : str
                 The filename to load the data from.
-
-        Returns
-        -------
-            list[Conversation]
-                The loaded conversations.
         """
-        return self.loader.load_prepared(filename)
+        self.conversations = self.loader.load_prepared(filename)

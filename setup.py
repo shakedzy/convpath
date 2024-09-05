@@ -40,4 +40,9 @@ setup(
     install_requires=INSTALL_REQUIRES,
     packages=find_packages(),
     classifiers=CLASSIFIERS,
+    entry_points={
+        'console_scripts': [
+            f'{PACKAGE_NAME} = {PACKAGE_NAME}._cli:run'
+        ]
+    }
 )
