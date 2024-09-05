@@ -20,34 +20,15 @@ from ..constants import USER, ASSISTANT
 class DataLoader:
     SINGLE = 'SINGLE'
 
-    def __init__(self, 
-                 *,
-                 embedding_model: str,
-                 max_tokens: int | None,
-                 base_url: str | None,
-                 api_key: str | None):
+    def __init__(self):
         """
         Initialize a Data Loader.
-
-        Parameters
-        ----------
-            embedding_model : str
-               The name of the embedding model to use.
-            max_tokens :  int | None)
-                The maximum number of tokens accepted by the embedding model. This assists the loader in reducing calls to the embedding model by combining several 
-                texts in a single call.
-                If None, the loader will use pre-configured settings based on the model name. If it cannot find the model name in the pre-configured settings, 
-                it will not stack texts t reduce calls to the model, but will call the model for each text individually.
-            base_url : str | None
-                The base URL to use with OpenAI SDK. If None, OpenAI's default is used.
-            api_key : str | None
-                The API key to use with OpenAI SDK. If None, OpenAI's default is used.
         """
         self.logger = get_logger()
         self.settings = Settings()
-        self.client = OpenAI(base_url=base_url, api_key=api_key)
-        self.embedding_model = embedding_model
-        self.max_tokens = max_tokens or self.find_max_tokens_per_model(embedding_model)
+        self.client: OpenAI
+        self.embedding_model: str
+        self.max_tokens: int | None
 
     @staticmethod
     def find_max_tokens_per_model(model: str) -> int | None:
@@ -73,12 +54,16 @@ class DataLoader:
 
     def load_and_process_conversations(self, 
                                        conversations: list[list[dict[str, Any] | str]], 
-                                       titles: list[str] = []
+                                       titles: list[str] = [],
+                                       *,
+                                       embedding_model: str,
+                                       max_tokens: int | None,
+                                       base_url: str | None,
+                                       api_key: str | None
                                        ) -> list[Conversation]:
         """
         Loads given conversations and preprocess them.
-
-        
+ 
         Parameters
         ----------
             conversations : list
@@ -90,12 +75,27 @@ class DataLoader:
                 Each conversations must be made either from dicts or strings, not a mix of both.
             titles : list[str]  
                 An optional list of strings. Each string is the title for each conversation in conversations.
+            embedding_model : str
+               The name of the embedding model to use.
+            max_tokens :  int | None
+                The maximum number of tokens accepted by the embedding model. This assists the loader in reducing calls to the embedding model by combining several 
+                texts in a single call.
+                If None, the loader will use pre-configured settings based on the model name. If it cannot find the model name in the pre-configured settings, 
+                it will not stack texts t reduce calls to the model, but will call the model for each text individually.
+            base_url : str | None
+                The base URL to use with OpenAI SDK. If None, OpenAI's default is used.
+            api_key : str | None
+                The API key to use with OpenAI SDK. If None, OpenAI's default is used.
 
         Returns
         -------
             list[Conversation]
                 A list of Conversation objects.
         """
+        self.embedding_model = embedding_model
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.max_tokens = max_tokens or self.find_max_tokens_per_model(embedding_model)
+
         if not titles:
             titles = [''] * len(conversations)
         elif len(titles) != len(conversations):
@@ -137,13 +137,13 @@ class DataLoader:
             filename : str
                 The filename to save the data under.
         """
-        output = [vars(c) for c in conversations]
+        output = [c.to_dict() for c in conversations]
         with open(filename, 'w') as f:
             json.dump(output, f)
 
-    def load(self, filename: str) -> list[Conversation]:
+    def load_prepared(self, filename: str) -> list[Conversation]:
         """
-        Loads all conversations from a file.
+        Loads preprocessed conversations from a file.
 
         Parameters
         ----------

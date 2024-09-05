@@ -68,28 +68,3 @@ def deflatten(flat_list: list[T], original_shape_list: list[list[Any]]) -> list[
         index += length
 
     return de_flattened
-
-
-def get_object_full_dict(obj: object) -> dict[str, Any]:
-    """
-    Returns an object as a dictionary with all its attributes and their values converted to dictionaries too. This is useful for serializing models to JSON.
-
-    Parameters
-    ----------
-        obj : object
-            The object to be converted
-    
-    Returns
-    -------
-        dict[str, Any]
-            The dictionary representation of the object
-    """
-    result = {}
-    for key, value in vars(obj).items():
-        if isinstance(value, BaseModel):
-            result[key] = value.model_dump()
-        elif hasattr(value, '__dict__'):
-            result[key] = get_object_full_dict(value)
-        else:
-            result[key] = value
-    return result

@@ -6,3 +6,4 @@
 
 *.ipynb
 debug.py
+_data.json
