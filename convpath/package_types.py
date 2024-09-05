@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError
-from typing import Literal
+from typing import Literal, Any, Sequence
+from .utils import get_object_full_dict
 from .constants import USER, ASSISTANT
 
 
@@ -40,10 +41,13 @@ class Step:
     tsne_embedding: Embedding
     trimmed: bool = False
 
-    def __init__(self, user_message: LLMMessage, assistant_message: LLMMessage | None = None) -> None:
-        self.user_message = user_message
-        self.assistant_message = assistant_message
+    def __init__(self, user_message: LLMMessage | dict[str, Any], assistant_message: LLMMessage | dict[str, Any] | None = None) -> None:
+        self.user_message = user_message if isinstance(user_message, LLMMessage) else LLMMessage(**user_message)
+        self.assistant_message = assistant_message if (assistant_message is None or isinstance(assistant_message, LLMMessage)) else LLMMessage(**assistant_message)
         self.id = self._create_id()        
+
+    def __dict__(self) -> dict[str, Any]:
+        return get_object_full_dict(self)
 
     @property
     def is_paired(self) -> bool:
@@ -67,6 +71,9 @@ class Conversation:
     first_last_similarity_difference: float
     closest_conversations_titles_and_distances: list[tuple[str, float]]
 
-    def __init__(self, steps: list[Step], title: str) -> None:
+    def __init__(self, steps: Sequence[Step | dict[str, Any]], title: str) -> None:
         self.title = title
-        self.steps = steps
+        self.steps = [step if isinstance(step, Step) else Step(**step) for step in steps]
+
+    def __dict__(self) -> dict[str, Any]:
+        return get_object_full_dict(self)

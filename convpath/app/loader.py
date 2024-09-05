@@ -1,3 +1,4 @@
+import json
 import heapq
 import tiktoken
 import numpy as np
@@ -28,14 +29,19 @@ class DataLoader:
         """
         Initialize a Data Loader.
 
-        Args:
-            embedding_model (str): The name of the embedding model to use.
-            max_tokens (int | None): The maximum number of tokens accepted by the embedding model. This assists the loader in reducing calls to the embedding model by combining several 
-                                     texts in a single call.
-                                     If None, the loader will use pre-configured settings based on the model name. If it cannot find the model name in the pre-configured settings, 
-                                     it will not stack texts t reduce calls to the model, but will call the model for each text individually.
-            base_url (str | None): The base URL to use with OpenAI SDK. If None, OpenAI's default is used.
-            api_key (str | None): The API key to use with OpenAI SDK. If None, OpenAI's default is used.
+        Parameters
+        ----------
+            embedding_model : str
+               The name of the embedding model to use.
+            max_tokens :  int | None)
+                The maximum number of tokens accepted by the embedding model. This assists the loader in reducing calls to the embedding model by combining several 
+                texts in a single call.
+                If None, the loader will use pre-configured settings based on the model name. If it cannot find the model name in the pre-configured settings, 
+                it will not stack texts t reduce calls to the model, but will call the model for each text individually.
+            base_url : str | None
+                The base URL to use with OpenAI SDK. If None, OpenAI's default is used.
+            api_key : str | None
+                The API key to use with OpenAI SDK. If None, OpenAI's default is used.
         """
         self.logger = get_logger()
         self.settings = Settings()
@@ -48,12 +54,16 @@ class DataLoader:
         """
         Returns the maximum number of tokens an embedding model can receive in a single call.
         If the model is unknown, returns None.
+        
+        Parameters
+        ----------
+            model : str
+                The name of the embedding model to use.
 
-        Args:
-            model (str): The name of the embedding model to use.
-
-        Returns:
-            (int | None): The maximum number of tokens, if known. Otherwise, returns None.
+        Returns
+        -------
+            int | None
+                The maximum number of tokens, if known. Otherwise, returns None.
         """
         match model:
             case 'text-embedding-ada-002' | 'text-embedding-3-small' | 'text-embedding-3-large':
@@ -68,17 +78,23 @@ class DataLoader:
         """
         Loads given conversations and preprocess them.
 
-        Args:
-            conversations (list): A list of lists of dicts or strings. 
-                            If dicts, each dict is a message in the conversation with an LLM.
-                            The keys must be 'role' and 'content' and the values must be strings.
-                            The 'role' key must be one of 'user' or 'assistant' (case-insensitive).
-                            If strings, each string is assumed to be a standalone message.
-                            Each conversations must be made either from dicts or strings, not a mix of both.
-            titles (list):  An optional list of strings. Each string is the title for each conversation in conversations.
+        
+        Parameters
+        ----------
+            conversations : list
+                A list of lists of dicts or strings. 
+                If dicts, each dict is a message in the conversation with an LLM.
+                The keys must be 'role' and 'content' and the values must be strings.
+                The 'role' key must be one of 'user' or 'assistant' (case-insensitive).
+                If strings, each string is assumed to be a standalone message.
+                Each conversations must be made either from dicts or strings, not a mix of both.
+            titles : list[str]  
+                An optional list of strings. Each string is the title for each conversation in conversations.
 
-        Returns:
-            (list[Conversation]): A list of Conversation objects.
+        Returns
+        -------
+            list[Conversation]
+                A list of Conversation objects.
         """
         if not titles:
             titles = [''] * len(conversations)
@@ -109,6 +125,39 @@ class DataLoader:
 
         console.log('[bold green]Done.')
         return loaded
+    
+    def save(self, conversations: list[Conversation], filename: str) -> None:
+        """
+        Saves all loaded and preprocessed data to a file.
+
+        Parameters
+        ----------
+            conversations : list[Conversation]
+                The conversations to save.
+            filename : str
+                The filename to save the data under.
+        """
+        output = [vars(c) for c in conversations]
+        with open(filename, 'w') as f:
+            json.dump(output, f)
+
+    def load(self, filename: str) -> list[Conversation]:
+        """
+        Loads all conversations from a file.
+
+        Parameters
+        ----------
+            filename : str
+                The filename to load the data from.
+
+        Returns
+        -------
+            list[Conversation]
+                The loaded conversations.
+        """
+        with open(filename, 'r') as f:
+            loaded = json.load(f)
+        return [Conversation(**c) for c in loaded]
 
     def _load_single_conversation(self, conversation: list[dict[str, Any] | str], title: str | None) -> Conversation | None:
         if isinstance(conversation[0], str):
