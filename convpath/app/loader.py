@@ -92,8 +92,7 @@ class DataLoader:
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(self._load_single_conversation, c, t) for c, t in zip(conversations, titles)]
             loaded = [c for f in track(futures, description="Loading conversations") if (c := f.result())]
-        console.print(f'[green]Loaded {len(loaded)}/{len(conversations)} conversations' + 
-                      f' ([red]{len(conversations)-len(loaded)} filtered)' if len(loaded)!= len(conversations) else '')
+        console.print(f'[green]Loaded {len(loaded)}/{len(conversations)} conversations {"([red]{len(conversations)-len(loaded)} filtered)" if len(loaded)!= len(conversations) else ""}')
         
         loaded, total_tokens = self._create_embeddings(loaded)
         console.print(f"[yellow]Embedded {total_tokens} tokens")

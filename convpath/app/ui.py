@@ -6,13 +6,14 @@ from dash.exceptions import PreventUpdate
 from ..color_logger import get_logger
 from ..settings import Settings
 from ..utils import path_to_resource
-from ..package_types import Conversation
+from ..package_types import Conversation, Embedding
 
 
 class AppUI:
     LINE_OPACITY = 0.7
     LINE_WIDTH = 1
 
+    NEIGHBORS_COLOR = 'magenta'
     FIGURES_CONFIG = {
         'similarities_averages': {'size': 8, 'color': 'navy', 'symbol': 'square'},
         'error_bars': {'size': 8, 'color': 'navy', 'symbol': 'square'},
@@ -64,18 +65,41 @@ class AppUI:
 
         return figure
     
-    def _update_similarities_averages_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int) -> go.Figure: 
-        i, v = [(i, c.avg_similarity) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
+    def __plot_left_figures_specific_point(self, 
+                                           figure: go.Figure, 
+                                           title: str, 
+                                           value: float, 
+                                           index: int, 
+                                           color: str,
+                                           size: int, 
+                                           symbol: str, 
+                                           row: int, 
+                                           col: int) -> go.Figure:
         plot = go.Scatter(
-            x=[self._x_axis()[i]],
-            y=[v],
+            x=[self._x_axis()[index]],
+            y=[value],
             mode='markers',
-            marker_symbol=self.FIGURES_CONFIG['similarities_averages']['symbol'],
-            marker_color=self.FIGURES_CONFIG['similarities_averages']['color'],
-            marker_size=2 * self.FIGURES_CONFIG['similarities_averages']['size'],
-            ids=[highlighted_id]
+            marker_symbol=symbol,
+            marker_color=color,
+            marker_size=size,
+            ids=[title]
         )
         figure.add_trace(plot, row=row, col=col)
+        return figure
+
+    
+    def _update_similarities_averages_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
+        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
+        neighbors = [(i, c.avg_similarity) for i, c in enumerate(self.conversations)
+                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        i, v = [(i, c.avg_similarity) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
+        size = self.FIGURES_CONFIG['similarities_averages']['size']
+        symbol = self.FIGURES_CONFIG['similarities_averages']['symbol']
+        
+        for index, value in neighbors:
+            figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[index].title, value=value, index=index, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['similarities_averages']['color'])
+
         return figure
 
     def _plot_static_error_bars(self, figure: go.Figure, row: int, col: int) -> go.Figure:
@@ -149,18 +173,19 @@ class AppUI:
 
         return figure
     
-    def _update_error_bars_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int) -> go.Figure: 
+    def _update_error_bars_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
+        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
         i = [i for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
-        plot = go.Scatter(
-            x=[self._x_axis()[i]],
-            y=[sum([c.avg_similarity for c in self.conversations]) / len(self.conversations)],
-            mode='markers',
-            marker_symbol=self.FIGURES_CONFIG['error_bars']['symbol'],
-            marker_color=self.FIGURES_CONFIG['error_bars']['color'],
-            marker_size=2 * self.FIGURES_CONFIG['error_bars']['size'],
-            ids=[highlighted_id]
-        )
-        figure.add_trace(plot, row=row, col=col)
+        y = sum([c.avg_similarity for c in self.conversations]) / len(self.conversations)
+        neighbors = [i for i, c in enumerate(self.conversations)
+                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        size = self.FIGURES_CONFIG['error_bars']['size']
+        symbol = self.FIGURES_CONFIG['error_bars']['symbol']
+        
+        for n in neighbors:
+            figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[n].title, value=y, index=n, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=y, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['error_bars']['color'])
+
         return figure
     
     def _plot_static_first_last_similarities(self, figure: go.Figure, row: int, col: int) -> go.Figure:
@@ -195,18 +220,18 @@ class AppUI:
         
         return figure
     
-    def _update_first_last_similarities_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int) -> go.Figure: 
+    def _update_first_last_similarities_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
         i, v = [(i, c.first_last_similarity_difference) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
-        plot = go.Scatter(
-            x=[self._x_axis()[i]],
-            y=[v],
-            mode='markers',
-            marker_symbol=self.FIGURES_CONFIG['first_last_similarities']['symbol'],
-            marker_color=self.FIGURES_CONFIG['first_last_similarities']['color'],
-            marker_size=2 * self.FIGURES_CONFIG['first_last_similarities']['size'],
-            ids=[highlighted_id]
-        )
-        figure.add_trace(plot, row=row, col=col)
+        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
+        neighbors = [(i, c.first_last_similarity_difference) for i, c in enumerate(self.conversations)
+                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        size = self.FIGURES_CONFIG['first_last_similarities']['size']
+        symbol = self.FIGURES_CONFIG['first_last_similarities']['symbol']
+        
+        for index, value in neighbors:
+            figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[index].title, value=value, index=index, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['first_last_similarities']['color'])
+
         return figure
     
     def _plot_static_tsne(self, figure: go.Figure, row: int, col: int) -> go.Figure:
@@ -234,48 +259,59 @@ class AppUI:
         figure.update_traces(hovertemplate='%{id}<extra></extra>', row=row, col=col)
         return figure
     
-    def _update_tsne_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int) -> go.Figure: 
-        highlighted_embeddings = [[r.tsne_embedding for r in c.steps] for c in self.conversations if c.title == highlighted_id][0]
-        x = [e[0] for e in highlighted_embeddings]
-        y = [e[1] for e in highlighted_embeddings]
-        symbols = ["square"] + ["circle"]*len(highlighted_embeddings[1:-1]) + ["x"]
-        for x_, y_, s_ in zip(x, y, symbols):
+    def _update_tsne_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
+        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
+        highlighted_embeddings = [s.tsne_embedding for s in highlighted_conversation.steps]
+        closest_embeddings = [(c.title, [s.tsne_embedding for s in c.steps]) for c in self.conversations 
+                              if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        
+        def plot_path(title: str, embeddings: list[Embedding], color: str):
+            nonlocal figure
+            x = [e[0] for e in embeddings]
+            y = [e[1] for e in embeddings]
+            symbols = ["square"] + ["circle"]*len(embeddings[1:-1]) + ["x"]
+            for x_, y_, s_ in zip(x, y, symbols):
+                figure.add_trace(
+                    go.Scatter(
+                        x=[x_], y=[y_], 
+                        mode="markers", 
+                        marker=dict(
+                            color=color,
+                            size=self.FIGURES_CONFIG['tsne']['size'],
+                            symbol=s_
+                        ),
+                        ids=[title]
+                    ),
+                    row=row, col=col
+                )
             figure.add_trace(
-                go.Scatter(
-                    x=[x_], y=[y_], 
-                    mode="markers", 
-                    marker=dict(
-                        color=self.FIGURES_CONFIG['tsne']['highlight_color'],
-                        size=self.FIGURES_CONFIG['tsne']['size'],
-                        symbol=s_
+                    go.Scatter(
+                        x=x, y=y, 
+                        mode="lines", 
+                        marker=dict(
+                            color=color,
+                        ),
+                        ids=[title]
                     ),
-                    ids=[highlighted_id]
-                ),
-                row=row, col=col
-            )
-        figure.add_trace(
-                go.Scatter(
-                    x=x, y=y, 
-                    mode="lines", 
-                    marker=dict(
-                        color=self.FIGURES_CONFIG['tsne']['highlight_color'],
-                    ),
-                    ids=[highlighted_id]
-                ),
-                row=row, col=col
-            )
+                    row=row, col=col
+                )
+        
+        for title, embeddings in closest_embeddings:
+            plot_path(title=title, embeddings=embeddings, color=self.NEIGHBORS_COLOR)
+        plot_path(title=highlighted_conversation.title, embeddings=highlighted_embeddings, color=self.FIGURES_CONFIG['tsne']['highlight_color'])
+            
         return figure
 
     def _register_callbacks(self) -> None:
         @callback(
             [Output('main-figure', 'figure'), Output('id-selector', 'value'), Output('last-id-displayed', 'data'), Output('clear-button-clicks', 'data')], 
-            [Input('main-figure', 'hoverData'), Input('id-selector', 'value'), Input('clear-selector-button', 'n_clicks')],
+            [Input('main-figure', 'hoverData'), Input('id-selector', 'value'), Input('clear-selector-button', 'n_clicks'), Input('neighbor-slider', 'value')],
             [State('last-id-displayed', 'data'), State('clear-button-clicks', 'data')]
         )
-        def update_graph(hover_data, selector_value, button_clicks, last_id, prev_button_clicks) -> tuple[go.Figure, str | None, str | None, int]:
+        def update_graph(hover_data, selector_value, button_clicks, k, last_id, prev_button_clicks) -> tuple[go.Figure, str | None, str | None, int]:
             if button_clicks is None:
                 button_clicks = 0
-
+            
             if selector_value != last_id:
                 hover_id = selector_value
             elif button_clicks > prev_button_clicks:
@@ -289,10 +325,10 @@ class AppUI:
                 figure = self.static_figure
             else:
                 figure = self.static_figure
-                figure = self._update_similarities_averages_with_highlighted_id(figure, hover_id, row=1, col=1)
-                figure = self._update_error_bars_with_highlighted_id(figure, hover_id, row=2, col=1)
-                figure = self._update_first_last_similarities_with_highlighted_id(figure, hover_id, row=3, col=1)
-                figure = self._update_tsne_with_highlighted_id(figure, hover_id, row=1, col=2)
+                figure = self._update_similarities_averages_with_highlighted_id(figure, hover_id, row=1, col=1, k=k)
+                figure = self._update_error_bars_with_highlighted_id(figure, hover_id, row=2, col=1, k=k)
+                figure = self._update_first_last_similarities_with_highlighted_id(figure, hover_id, row=3, col=1, k=k)
+                figure = self._update_tsne_with_highlighted_id(figure, hover_id, row=1, col=2, k=k)
             return (figure, hover_id, hover_id, button_clicks)
 
     def _create_static_figure(self) -> go.Figure:
@@ -341,11 +377,11 @@ class AppUI:
                 html.Div(className="row", children=[
                     html.Div(className="left-column", children=[
                         html.Div(className="card", style={'text-align': 'center'}, children=[
-                            html.Img(src=dash_app.get_asset_url('logo.png'), style={'max-height': '100px'})
+                            html.Img(src=dash_app.get_asset_url('logo.png'), style={'height': '100px', 'padding': '25px'})
                         ])
                     ]),
                     html.Div(className="right-column", children=[
-                        html.Div(className="card", children=[
+                        html.Div(className="card ", children=[
                             html.Label('Focus on conversation:'),
                             html.Div(style={'margin-top': '10px'}, children=[
                                 html.Button(id='clear-selector-button', className="btn", children=[
@@ -356,9 +392,15 @@ class AppUI:
                                     options=[c.title for c in self.conversations],
                                     value=None,
                                     style={'width': '70%', 'display': 'inline-block'}
-                                ),                                
+                                ),     
+                            ]),
+                            html.Hr(),
+                            html.Label('Number of neighbors to display:'),
+                            html.Div(style={'margin-top': '10px', 'width': '100%'}, children=[
+                                dcc.Slider(
+                                    min=0, max=10, step=1, value=3, id='neighbor-slider',
+                                )                                    
                             ])
-
                         ], style={'width': '100%', 'align-items': 'stretch', 'align-content': 'center'})
                     ], style={'align-items': 'stretch', 'justify-content': 'flex-start'})
                 ]),
