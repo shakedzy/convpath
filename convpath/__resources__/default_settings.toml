@@ -2,3 +2,4 @@ min_words_per_step = 30
 min_steps = 3
 port = 8050
 host = "127.0.0.1"
+skip_on_fail = true

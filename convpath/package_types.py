@@ -57,9 +57,9 @@ class Step():
     def _create_id(self) -> int:
         return hash(self.as_text())
 
-    def as_text(self) -> str:
+    def as_text(self, prefix: str = '') -> str:
         if self.assistant_message:
-            return f'{USER}: {self.user_message.content} {ASSISTANT}: {self.assistant_message.content}'
+            return f'{prefix + USER}: {self.user_message.content}\n{prefix + ASSISTANT}: {self.assistant_message.content}'
         else:
             return self.user_message.content
         

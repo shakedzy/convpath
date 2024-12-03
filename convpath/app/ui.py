@@ -13,12 +13,13 @@ class AppUI:
     LINE_OPACITY = 0.7
     LINE_WIDTH = 1
 
-    NEIGHBORS_COLOR = 'magenta'
+    NEIGHBORS_COLOR = 'orange'
+    HIGHLIGHT_COLOR = 'magenta'
     FIGURES_CONFIG = {
         'similarities_averages': {'size': 8, 'color': 'navy', 'symbol': 'square'},
         'error_bars': {'size': 8, 'color': 'navy', 'symbol': 'square'},
         'first_last_similarities': {'size': 8, 'color':'navy', 'symbol': 'x'},
-        'tsne': {'size': 8, 'color':'#aaaaaa', 'highlight_color': 'brown'},
+        'tsne': {'size': 8, 'color':'#aaaaaa'},
     }
 
     def __init__(self, conversations: list[Conversation]) -> None:
@@ -66,7 +67,8 @@ class AppUI:
         return figure
     
     def __plot_left_figures_specific_point(self, 
-                                           figure: go.Figure, 
+                                           figure: go.Figure,
+                                           *, 
                                            title: str, 
                                            value: float, 
                                            index: int, 
@@ -74,7 +76,10 @@ class AppUI:
                                            size: int, 
                                            symbol: str, 
                                            row: int, 
-                                           col: int) -> go.Figure:
+                                           col: int,
+                                           pos_err: float = 0.,
+                                           neg_err: float = 0.,
+                                           ) -> go.Figure:
         plot = go.Scatter(
             x=[self._x_axis()[index]],
             y=[value],
@@ -82,23 +87,26 @@ class AppUI:
             marker_symbol=symbol,
             marker_color=color,
             marker_size=size,
-            ids=[title]
+            ids=[title],
+            error_y={
+                'type': 'data',
+                'symmetric': False,
+                'array': [pos_err],
+                'arrayminus': [neg_err],
+            }
         )
         figure.add_trace(plot, row=row, col=col)
         return figure
 
-    
-    def _update_similarities_averages_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
-        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
-        neighbors = [(i, c.avg_similarity) for i, c in enumerate(self.conversations)
-                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+    def _update_similarities_averages_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, neighbors: list[str]) -> go.Figure: 
+        neighbors_i_v = [(i, c.avg_similarity) for i, c in enumerate(self.conversations) if c.title in neighbors]
         i, v = [(i, c.avg_similarity) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
         size = self.FIGURES_CONFIG['similarities_averages']['size']
         symbol = self.FIGURES_CONFIG['similarities_averages']['symbol']
         
-        for index, value in neighbors:
+        for index, value in neighbors_i_v:
             figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[index].title, value=value, index=index, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
-        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['similarities_averages']['color'])
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.HIGHLIGHT_COLOR)
 
         return figure
 
@@ -173,18 +181,16 @@ class AppUI:
 
         return figure
     
-    def _update_error_bars_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
-        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
-        i = [i for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
+    def _update_error_bars_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, neighbors: list[str]) -> go.Figure: 
+        i, pos_error, neg_error = [(i, c.max_similarity - c.avg_similarity, c.avg_similarity - c.min_similarity) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
         y = sum([c.avg_similarity for c in self.conversations]) / len(self.conversations)
-        neighbors = [i for i, c in enumerate(self.conversations)
-                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        neighbors_values = [(i, c.max_similarity - c.avg_similarity, c.avg_similarity - c.min_similarity) for i, c in enumerate(self.conversations) if c.title in neighbors]
         size = self.FIGURES_CONFIG['error_bars']['size']
         symbol = self.FIGURES_CONFIG['error_bars']['symbol']
         
-        for n in neighbors:
-            figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[n].title, value=y, index=n, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
-        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=y, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['error_bars']['color'])
+        for n, pos_err, neg_err in neighbors_values:
+            figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[n].title, value=y, index=n, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR, pos_err=pos_err, neg_err=neg_err)        
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=y, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.HIGHLIGHT_COLOR, pos_err=pos_error, neg_err=neg_error)
 
         return figure
     
@@ -220,17 +226,15 @@ class AppUI:
         
         return figure
     
-    def _update_first_last_similarities_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
+    def _update_first_last_similarities_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, neighbors: list[str]) -> go.Figure: 
         i, v = [(i, c.first_last_similarity_difference) for i, c in enumerate(self.conversations) if c.title == highlighted_id][0]
-        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
-        neighbors = [(i, c.first_last_similarity_difference) for i, c in enumerate(self.conversations)
-                     if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        neighbors_i_v = [(i, c.first_last_similarity_difference) for i, c in enumerate(self.conversations) if c.title in neighbors]
         size = self.FIGURES_CONFIG['first_last_similarities']['size']
         symbol = self.FIGURES_CONFIG['first_last_similarities']['symbol']
         
-        for index, value in neighbors:
+        for index, value in neighbors_i_v:
             figure = self.__plot_left_figures_specific_point(figure, title=self.conversations[index].title, value=value, index=index, row=row, col=col, size=size, symbol=symbol, color=self.NEIGHBORS_COLOR)        
-        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.FIGURES_CONFIG['first_last_similarities']['color'])
+        figure = self.__plot_left_figures_specific_point(figure, title=highlighted_id, value=v, index=i, row=row, col=col, symbol=symbol, size=2*size, color=self.HIGHLIGHT_COLOR)
 
         return figure
     
@@ -259,11 +263,10 @@ class AppUI:
         figure.update_traces(hovertemplate='%{id}<extra></extra>', row=row, col=col)
         return figure
     
-    def _update_tsne_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, k: int) -> go.Figure: 
+    def _update_tsne_with_highlighted_id(self, figure: go.Figure, highlighted_id: str, row: int, col: int, neighbors: list[str]) -> go.Figure: 
         highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
         highlighted_embeddings = [s.tsne_embedding for s in highlighted_conversation.steps]
-        closest_embeddings = [(c.title, [s.tsne_embedding for s in c.steps]) for c in self.conversations 
-                              if c.title in [t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]]]
+        closest_embeddings = [(c.title, [s.tsne_embedding for s in c.steps]) for c in self.conversations if c.title in neighbors]
         
         def plot_path(title: str, embeddings: list[Embedding], color: str):
             nonlocal figure
@@ -298,38 +301,102 @@ class AppUI:
         
         for title, embeddings in closest_embeddings:
             plot_path(title=title, embeddings=embeddings, color=self.NEIGHBORS_COLOR)
-        plot_path(title=highlighted_conversation.title, embeddings=highlighted_embeddings, color=self.FIGURES_CONFIG['tsne']['highlight_color'])
+        plot_path(title=highlighted_conversation.title, embeddings=highlighted_embeddings, color=self.HIGHLIGHT_COLOR)
             
         return figure
+    
+    def _get_neighbors_ids(self, highlighted_id: str, k: int) -> list[str]:
+        highlighted_conversation = [c for c in self.conversations if c.title == highlighted_id][0]
+        neighbors = [c for c in self.conversations
+                     if c.title in [
+                            t[0] for t in highlighted_conversation.closest_conversations_titles_and_distances[0:k]
+                        ]
+                    ]
+        return [n.title for n in neighbors]
+    
+    def _get_conversation_as_text(self, conversation: Conversation) -> str:
+        return '\n'.join(s.as_text(prefix='>> ') for s in conversation.steps)
 
     def _register_callbacks(self) -> None:
         @callback(
-            [Output('main-figure', 'figure'), Output('id-selector', 'value'), Output('last-id-displayed', 'data'), Output('clear-button-clicks', 'data')], 
-            [Input('main-figure', 'hoverData'), Input('id-selector', 'value'), Input('clear-selector-button', 'n_clicks'), Input('neighbor-slider', 'value')],
-            [State('last-id-displayed', 'data'), State('clear-button-clicks', 'data')]
+            [
+                Output('main-figure', 'figure'), 
+                Output('id-selector', 'value'), 
+                Output('last-id-displayed', 'data'), 
+                Output('clear-button-clicks', 'data'),
+                Output('selected-title', 'value'),
+                Output('neighbor-titles', 'options'),
+                Output('selected-conversation', 'value'),
+                Output('last-neighbor-id-shown', 'value'),
+                Output('neighbor-conversation', 'value'),
+            ], 
+            [
+                Input('main-figure', 'figure'),
+                Input('main-figure', 'clickData'), 
+                Input('id-selector', 'value'), 
+                Input('clear-selector-button', 'n_clicks'), 
+                Input('neighbor-slider', 'value'),
+                Input('neighbor-titles', 'value')
+            ],
+            [
+                State('last-id-displayed', 'data'), 
+                State('clear-button-clicks', 'data'),
+                State('last-neighbor-id-shown', 'value')
+            ]
         )
-        def update_graph(hover_data, selector_value, button_clicks, k, last_id, prev_button_clicks) -> tuple[go.Figure, str | None, str | None, int]:
+        def update_graph(figure: go.Figure,
+                         click_data: dict, 
+                         selector_value: str, 
+                         button_clicks: int | None, 
+                         k: int, 
+                         selected_neighbor: str | None,
+                         # States
+                         last_id: str, 
+                         prev_button_clicks: int,
+                         last_selected_neighbor: str | None,
+                         ) -> tuple[go.Figure, 
+                                    str | None, 
+                                    str | None, 
+                                    int,
+                                    str | None,
+                                    list[str],
+                                    str | None,
+                                    str | None,
+                                    str | None,
+                                    ]:
             if button_clicks is None:
                 button_clicks = 0
-            
+
             if selector_value != last_id:
                 hover_id = selector_value
             elif button_clicks > prev_button_clicks:
                 hover_id = None
-            elif hover_data is not None:
-                hover_id = hover_data['points'][0]['id']  # ID of the hovered point
+            elif click_data is not None:
+                hover_id = click_data['points'][0]['id']
             else:
                 raise PreventUpdate()
             
-            if hover_id is None:
+            print(selected_neighbor, last_selected_neighbor)
+            if selected_neighbor and selected_neighbor != last_selected_neighbor:  # dropdown of neighbor conversations was changed, not the selected ID
+                last_selected_neighbor = selected_neighbor
+            elif hover_id is None:
+                neighbors = []
+                last_selected_neighbor = None
                 figure = self.static_figure
             else:
+                neighbors = self._get_neighbors_ids(hover_id, k)
+                last_selected_neighbor = None
                 figure = self.static_figure
-                figure = self._update_similarities_averages_with_highlighted_id(figure, hover_id, row=1, col=1, k=k)
-                figure = self._update_error_bars_with_highlighted_id(figure, hover_id, row=2, col=1, k=k)
-                figure = self._update_first_last_similarities_with_highlighted_id(figure, hover_id, row=3, col=1, k=k)
-                figure = self._update_tsne_with_highlighted_id(figure, hover_id, row=1, col=2, k=k)
-            return (figure, hover_id, hover_id, button_clicks)
+                figure = self._update_similarities_averages_with_highlighted_id(figure, hover_id, row=1, col=1, neighbors=neighbors)
+                figure = self._update_error_bars_with_highlighted_id(figure, hover_id, row=2, col=1, neighbors=neighbors)
+                figure = self._update_first_last_similarities_with_highlighted_id(figure, hover_id, row=3, col=1, neighbors=neighbors)
+                figure = self._update_tsne_with_highlighted_id(figure, hover_id, row=1, col=2, neighbors=neighbors)
+                figure.update_traces(hovertemplate='%{id}<extra></extra>')
+
+            return (figure, hover_id, hover_id, button_clicks, hover_id, neighbors, 
+                    [self._get_conversation_as_text(c) for c in self.conversations if c.title == hover_id][0] if hover_id else None,
+                    last_selected_neighbor, 
+                    [self._get_conversation_as_text(c) for c in self.conversations if c.title == selected_neighbor][0] if selected_neighbor else None)
 
     def _create_static_figure(self) -> go.Figure:
         figure = make_subplots(
@@ -340,7 +407,7 @@ class AppUI:
             subplot_titles=["Conversation Similarity", "Paths T-SNE Projections",
                             "Top Min/Max Similarity Across Conversations",
                             "Distance of First and Last Rounds"],
-            column_widths=[.5, .5],   
+            column_widths=[.6, .4],   
             row_heights=[1./3] * 3, 
             horizontal_spacing=0.05,  
             vertical_spacing=0.05 
@@ -376,6 +443,8 @@ class AppUI:
         dash_app.layout = [
             dcc.Store(id='last-id-displayed', data=None),
             dcc.Store(id='clear-button-clicks', data=0),
+            dcc.Store(id='last-neighbor-id-shown', data=None),
+
             html.Div(className="container", children=[
                 html.Div(className="row", children=[
                     html.Div(className="left-column", children=[
@@ -399,15 +468,33 @@ class AppUI:
                             ]),
                             html.Hr(),
                             html.Label('Number of neighbors to display:'),
-                            html.Div(style={'margin-top': '10px', 'width': '100%'}, children=[
-                                dcc.Slider(
-                                    min=0, max=10, step=1, value=3, id='neighbor-slider',
-                                )                                    
-                            ])
+                                    html.Div(style={'margin-top': '10px', 'width': '60%'}, children=[
+                                        dcc.Slider(
+                                            min=0, max=10, step=1, value=3, id='neighbor-slider',
+                                        )                                    
+                                    ]),
                         ], style={'width': '100%', 'align-items': 'stretch', 'align-content': 'center'})
                     ], style={'align-items': 'stretch', 'justify-content': 'flex-start'})
                 ]),
                 html.Div(className="graph-container", children=[dcc.Graph(id='main-figure', figure=self.static_figure, style={'height': '80vh'}),]),
+                html.Div(className="card", children=[
+                    html.Div(className="row", children=[
+                        html.Div(style={'width': '50%'}, children=[
+                            html.Label("Selected Conversation"),
+                            dcc.Textarea(id='selected-title', style={'width': '100%'}, disabled=True),
+                        ]),
+                        html.Div(style={'width': '50%'}, children=[
+                            html.Label("Neighbors"),
+                            dcc.Dropdown(id='neighbor-titles', style={'width': '100%'}), 
+                        ]),
+                    ]),
+                    html.Hr(),
+                    html.Div(style={'display': 'flex', 'align-items':'stretch'}, children=[
+                        dcc.Textarea(id='selected-conversation', style={'width': '50%', 'flex': '1', 'height': '500px'}, disabled=True),
+                        dcc.Textarea(id='neighbor-conversation', style={'width': '50%', 'flex': '1', 'height': '500px'}, disabled=True)                        
+                    ])
+
+                ]),
             ])
         ]
         host_: str = host or self.settings.host

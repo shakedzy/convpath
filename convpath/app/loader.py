@@ -108,7 +108,8 @@ class DataLoader:
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(self._load_single_conversation, c, t) for c, t in zip(conversations, titles)]
             loaded = [c for f in track(futures, description="Loading conversations") if (c := f.result())]
-        console.print(f'[green]Loaded {len(loaded)}/{len(conversations)} conversations {"([red]{len(conversations)-len(loaded)} filtered)" if len(loaded)!= len(conversations) else ""}')
+        skipped_text = f" [red]({len(conversations)-len(loaded)} filtered)" if len(loaded)!= len(conversations) else ""
+        console.print(f'[green]Loaded {len(loaded)}/{len(conversations)} conversations{skipped_text}')
         
         loaded, total_tokens = self._create_embeddings(loaded)
         console.print(f"[yellow]Embedded {total_tokens} tokens")
@@ -160,25 +161,31 @@ class DataLoader:
         return [Conversation(**c) for c in loaded]
 
     def _load_single_conversation(self, conversation: list[dict[str, Any] | str], title: str | None) -> Conversation | None:
-        if isinstance(conversation[0], str):
-            messages = [LLMMessage(role=self.SINGLE, content=m) for m in cast(list[str], conversation)]
-            steps = [self._create_step_from_messages(user_message=m) for m in messages]
-        else:
-            messages = [LLMMessage(**m) for m in cast(list[dict[str, Any]], conversation)]
-            messages = [m for m in messages if m.role in [USER, ASSISTANT]]
-            if not (all(m.role == USER for m in messages[::2]) and \
-                    all(m.role == ASSISTANT for m in messages[1::2])):
-                raise ValueError('Conversation must be alternating between `user` and `assistant`, (`user` goes first)')
-            steps = [self._create_step_from_messages(user_message=messages[i], assistant_message=messages[i+1]) 
-                    for i in range(0, len(messages), 2)]
-        
-        steps = [s for s in steps if s]
-        if len(steps) < self.settings.min_steps:
-            return None
-        else:
-            if not title:
-                title = str(steps[0].id)
-            return Conversation(title=title, steps=steps)
+        try:
+            if isinstance(conversation[0], str):
+                messages = [LLMMessage(role=self.SINGLE, content=m) for m in cast(list[str], conversation)]
+                steps = [self._create_step_from_messages(user_message=m) for m in messages]
+            else:
+                messages = [LLMMessage(**m) for m in cast(list[dict[str, Any]], conversation)]
+                messages = [m for m in messages if m.role in [USER, ASSISTANT]]
+                if not (all(m.role == USER for m in messages[::2]) and \
+                        all(m.role == ASSISTANT for m in messages[1::2])):
+                    raise ValueError('Conversation must be alternating between `user` and `assistant`, (`user` goes first)')
+                steps = [self._create_step_from_messages(user_message=messages[i], assistant_message=messages[i+1]) 
+                        for i in range(0, len(messages), 2)]
+            
+            steps = [s for s in steps if s]
+            if len(steps) < self.settings.min_steps:
+                return None
+            else:
+                if not title:
+                    title = str(steps[0].id)
+                return Conversation(title=title, steps=steps)
+        except Exception as e:
+            if self.settings.skip_on_fail:
+                return None
+            else:
+                raise e
         
     def _get_embeddings_from_openai(self, texts: list[str]) -> list[Embedding]:
         texts = [text.replace('\n', ' ') for text in texts]
